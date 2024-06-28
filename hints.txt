@@ -1,0 +1,6 @@
+cd repos/codetiming/
+python -m pytest -qq -p pytest_cleanslate.reduce --count 5 
+coverup --module codetiming --tests tests --no-isolate --disable-polluting --model gpt-3.5-turbo --repeat-tests 1 ##timing
+/root/miniconda3/envs/coverup/bin/python -m slipcover --source /root/autodl-tmp/coverup/repos/codetiming/codetiming --branch  -m pytest --disable-warnings -x /root/autodl-tmp/coverup/repos/codetiming/tests
+/root/miniconda3/envs/coverup/bin/python -m slipcover --source docstring_parser --branch  -m pytest --disable-warnings -x tests
+coverup --module docstring_parser --tests tests --disable-polluting --model gpt-3.5-turbo -d --show-details --checkpoint './checkpoint' --log-file ./coverup.log

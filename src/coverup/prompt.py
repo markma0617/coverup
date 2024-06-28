@@ -28,6 +28,17 @@ class Prompter(abc.ABC):
 
 
     @abc.abstractmethod
+    def cot_initial_prompt(self) -> T.List[dict]:
+        """Returns initial prompt(s) for a code segment."""
+    
+    @abc.abstractmethod
+    def cot_next_prompt(self) -> T.List[dict]:
+        """Returns initial prompt(s) for a code segment."""
+    @abc.abstractmethod
+    def cot_inline_next_prompt(self) -> T.List[dict]:
+        """Returns initial prompt(s) for a code segment."""
+
+    @abc.abstractmethod
     def error_prompt(self, error: str) -> T.List[dict]:
         """Returns prompts(s) in response to an error."""
 
@@ -75,6 +86,42 @@ Respond ONLY with the Python code enclosed in backticks, without any explanation
 ```python
 {seg.get_excerpt()}
 ```
+""")
+    ]
+        
+    def cot_initial_prompt(self) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+        module_name = get_module_name(seg.path, args.module_dir)
+        filename = seg.path.relative_to(args.module_dir.parent)
+
+        return [
+            _message(f"""
+You are an expert Python test-driven developer.
+The code below, extracted from {filename},{' module ' + module_name + ',' if module_name else ''} does not achieve full coverage:
+when tested, {seg.lines_branches_missing_do()} not execute.
+Please analyze what logic needs to be met to achieve coverage of this line or branch.
+```python
+{seg.get_excerpt()}
+```
+""")
+    ]
+    def cot_next_prompt(self) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+
+        return [
+            _message(f"""
+Create new pytest test functions that execute these missing lines/branches, always making
+sure that the tests are correct and indeed improve coverage.
+Always send entire Python test scripts when proposing a new test or correcting one you
+previously proposed.
+Be sure to include assertions in the test that verify any applicable postconditions.
+Please also make VERY SURE to clean up after the test, so as to avoid state pollution;
+use 'monkeypatch' or 'pytest-mock' if appropriate.
+Write as little top-level code as possible, and in particular do not include any top-level code
+calling into pytest.main or the test itself.
+Respond ONLY with the Python code enclosed in backticks, without any explanation.
 """)
         ]
 
@@ -128,7 +175,79 @@ Respond ONLY with the Python code enclosed in backticks, without any explanation
 ```
 """)
         ]
+    def cot_initial_prompt(self) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+        module_name = get_module_name(seg.path, args.module_dir)
+        filename = seg.path.relative_to(args.module_dir.parent)
 
+        return [
+            _message(f"""
+You are an expert Python test-driven developer.
+The code below, extracted from {filename},{' module ' + module_name + ',' if module_name else ''} does not achieve full coverage:
+when tested, {seg.lines_branches_missing_do()} not execute.
+Please analyze what logics the test code needs to meet in order to cover these missing lines or branches in brief. 
+You should clearly and separately explain the reasons for these uncovered rows or branches, and provide a brief textual plan to cover them. No return code is required.
+```python
+{seg.get_excerpt()}
+```
+""")
+    ]
+    def cot_next_prompt(self, code_logic: str) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+        module_name = get_module_name(seg.path, args.module_dir)
+        filename = seg.path.relative_to(args.module_dir.parent)
+        return [
+            _message(f"""
+You are an expert Python test-driven developer.
+The code below, extracted from {filename},{' module ' + module_name + ',' if module_name else ''} does not achieve full coverage:
+when tested, {seg.lines_branches_missing_do()} not execute.
+Create new pytest test functions that execute these missing lines/branches, always making sure that the tests are correct and indeed improve coverage.
+The test logics in order to cover these missing lines or branches are: {code_logic}
+Always send entire Python test scripts when proposing a new test or correcting one you previously proposed.
+Be sure to include assertions in the test that verify any applicable postconditions.
+Please also make VERY SURE to clean up after the test, so as to avoid state pollution; Use 'monkeypatch' or 'pytest-mock' if appropriate.
+Write as little top-level code as possible, and in particular do not include any top-level code calling into pytest.main or the test itself.
+Respond ONLY with the Python code enclosed in backticks, without any explanation.
+```python
+{seg.get_excerpt()}
+```
+""")
+        ]
+    def cot_inline_initial_prompt(self) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+        module_name = get_module_name(seg.path, args.module_dir)
+        filename = seg.path.relative_to(args.module_dir.parent)
+
+        return [
+            _message(f"""
+You are an expert Python test-driven developer. Think step by step.
+The code below, extracted from {filename},{' module ' + module_name + ',' if module_name else ''} does not achieve full coverage:
+when tested, {seg.lines_branches_missing_do()} not execute.
+Please analyze what logics the test code needs to meet in order to cover these missing lines or branches in brief. 
+You should clearly and separately explain the reasons for these uncovered rows or branches, and provide a brief textual plan to cover them. No return code is required.
+```python
+{seg.get_excerpt()}
+```
+""")
+    ]
+    def cot_inline_next_prompt(self) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+        module_name = get_module_name(seg.path, args.module_dir)
+        filename = seg.path.relative_to(args.module_dir.parent)
+        return [
+            _message(f"""
+Create new pytest test functions that execute these missing lines/branches, always making sure that the tests are correct and indeed improve coverage.
+Always send entire Python test scripts when proposing a new test or correcting one you previously proposed.
+Be sure to include assertions in the test that verify any applicable postconditions.
+Please also make VERY SURE to clean up after the test, so as to avoid state pollution; Use 'monkeypatch' or 'pytest-mock' if appropriate.
+Write as little top-level code as possible, and in particular do not include any top-level code calling into pytest.main or the test itself.
+Respond ONLY with the Python code enclosed in backticks, without any explanation.
+""")
+        ]
 
     def error_prompt(self, error: str) -> T.List[dict]:
         return [_message(f"""\

@@ -1,2 +1,5 @@
 .hypothesis
 __pycache__
+repos/
+old-rag/
+.pytest_cache/

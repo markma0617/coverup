@@ -1,0 +1,10 @@
+2024-06-26 16:20:30,252 - [PID: 51785][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:24:03,508 - [PID: 52058][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:24:13,189 - [PID: 52135][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:24:53,862 - [PID: 52220][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:25:39,171 - [PID: 52404][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:27:59,578 - [PID: 52701][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:28:39,487 - [PID: 52840][MainProcess] - [Function: <module>] - INFO - 开始下载embedding模型：netease-youdao/bce-embedding-base_v1
+2024-06-26 16:28:40,088 - [PID: 52840][MainProcess] - [Function: <module>] - INFO - 模型下载完毕！cache地址：/root/autodl-tmp/.cache/ms/hub/netease-youdao/bce-embedding-base_v1, 软链接地址：/root/autodl-tmp/coverup/src/coverup/RAG_connector/embedding/embedding_model_configs_v0.0.1
+2024-06-26 16:41:18,088 - [PID: 55689][MainProcess] - [Function: split_file_to_docs] - INFO - before 2nd split doc lens: 1
+2024-06-26 16:41:18,298 - [PID: 55689][MainProcess] - [Function: split_file_to_docs] - INFO - after 2nd split doc lens: 3

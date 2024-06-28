@@ -59,12 +59,14 @@ def parse_args(args=None):
 
     def default_model():
         if 'OPENAI_API_KEY' in os.environ:
-            return "openai/gpt-4o-2024-05-13"
+            return "openai/gpt-3.5-turbo"
         if 'ANTHROPIC_API_KEY' in os.environ:
             return "anthropic/claude-3-sonnet-20240229"
         if 'AWS_ACCESS_KEY_ID' in os.environ:
             return "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
 
+    ap.add_argument('--cot', type=str, default='none',
+                    help='cot prompter type: none, cot, cot-inline',)
     ap.add_argument('--model', type=str, default=default_model(),
                     help='OpenAI model to use')
 
@@ -468,9 +470,14 @@ async def do_chat(seg: CodeSegment, completion: dict) -> str:
     """Sends a GPT chat request, handling common failures and returning the response."""
 
     global token_rate_limit
-
+    import time
+    start_time = time.time()
     sleep = 1
     while True:
+        now_time = time.time()
+        if now_time - start_time > 30:
+            log_write(seg, f"TimeOutError")
+            return None # gives up this segment
         try:
             if token_rate_limit:
                 try:
@@ -478,9 +485,21 @@ async def do_chat(seg: CodeSegment, completion: dict) -> str:
                 except ValueError as e:
                     log_write(seg, f"Error: too many tokens for rate limit ({e})")
                     return None # gives up this segment
-
+            '''
+            
+                
+            import os
+            openai_key = os.getenv('OPENAI_API_KEY')
+            openai_base = os.getenv('OPENAI_API_BASE')
+            print(openai_key, openai_base)
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key, base_url=openai_base)
+            response = client.chat.completions.create(model=completion['model'], messages=completion['messages'], temperature=completion['temperature'], stream=False)
+            #print(response)
+            print('get result')
+            return await response
+            '''
             return await litellm.acreate(**completion)
-
         except (litellm.exceptions.ServiceUnavailableError,
                 openai.RateLimitError,
                 openai.APITimeoutError) as e:
@@ -530,21 +549,73 @@ def extract_python(response: str) -> str:
 async def improve_coverage(seg: CodeSegment) -> bool:
     """Works to improve coverage for a code segment."""
     global args, progress
-
+    import time 
     def log_prompts(prompts: T.List[dict]):
         for p in prompts:
             log_write(seg, p['content'])
     
     prompter = prompt.prompters[args.prompt_family](args=args, segment=seg)
-    messages = prompter.initial_prompt()
-    log_prompts(messages)
+    start_time = time.time()
+    #messages = prompter.initial_prompt()
+    if args.cot == 'cot':
+        messages = prompter.cot_initial_prompt()
+        log_prompts(messages)
+        completion = {'model': args.model,
+                        'messages': messages,
+                        'temperature': args.model_temperature}
+            
+        if "ollama" in args.model:
+            completion["api_base"] = "http://localhost:11434"
+                
+        if not (response := await do_chat(seg, completion)):
+            log_write(seg, "giving up")
+            return True
 
+        response_message = response["choices"][0]["message"]
+        log_write(seg, response_message['content'])
+
+        state.add_usage(response['usage'])
+        log_write(seg, f"total usage: {state.usage}")
+        
+        messages = prompter.cot_next_prompt(response_message['content'])
+        log_prompts(messages)
+    elif args.cot == 'cot-inline':
+        messages = prompter.cot_inline_initial_prompt()
+        log_prompts(messages)
+        completion = {'model': args.model,
+                        'messages': messages,
+                        'temperature': args.model_temperature}
+            
+        if "ollama" in args.model:
+            completion["api_base"] = "http://localhost:11434"
+                
+        if not (response := await do_chat(seg, completion)):
+            log_write(seg, "giving up")
+            return True
+
+        response_message = response["choices"][0]["message"]
+        log_write(seg, response_message['content'])
+
+        state.add_usage(response['usage'])
+        log_write(seg, f"total usage: {state.usage}")
+        messages.append({'role': 'assistant', 'content': response_message['content']})
+        
+        messages += prompter.cot_inline_next_prompt()
+        #print(messages)
+        log_prompts(messages)
+    else:
+        messages = prompter.initial_prompt()
+        log_prompts(messages)
     attempts = 0
 
     if args.dry_run:
         return True
 
     while True:
+        now_time = time.time()
+        if now_time - start_time > 60:
+            log_write(seg, f"TimeOutError")
+            return None # gives up this segment
         attempts += 1
         if (attempts > args.max_attempts):
             log_write(seg, "Too many attempts, giving up")
