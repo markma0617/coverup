@@ -248,7 +248,24 @@ Write as little top-level code as possible, and in particular do not include any
 Respond ONLY with the Python code enclosed in backticks, without any explanation.
 """)
         ]
+    def cot_rag_initial_prompt(self) -> T.List[dict]:
+        args = self.args
+        seg = self.segment
+        module_name = get_module_name(seg.path, args.module_dir)
+        filename = seg.path.relative_to(args.module_dir.parent)
 
+        return [
+            _message(f"""
+You are an expert Python test-driven developer. Think step by step.
+The code below, extracted from {filename},{' module ' + module_name + ',' if module_name else ''} does not achieve full coverage:
+when tested, {seg.lines_branches_missing_do()} not execute.
+
+```python
+{seg.get_excerpt()}
+```
+""")
+    ]
+        
     def error_prompt(self, error: str) -> T.List[dict]:
         return [_message(f"""\
 Executing the test yields an error, shown below.

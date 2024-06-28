@@ -66,7 +66,7 @@ def parse_args(args=None):
             return "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
 
     ap.add_argument('--cot', type=str, default='none',
-                    help='cot prompter type: none, cot, cot-inline',)
+                    help='cot prompter type: none, cot, cot-inline, cot-rag, cot-inline-rag',)
     ap.add_argument('--model', type=str, default=default_model(),
                     help='OpenAI model to use')
 
@@ -603,6 +603,8 @@ async def improve_coverage(seg: CodeSegment) -> bool:
         messages += prompter.cot_inline_next_prompt()
         #print(messages)
         log_prompts(messages)
+    elif args.cot == 'cot-rag':
+        pass
     else:
         messages = prompter.initial_prompt()
         log_prompts(messages)
